@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hardware Architecture Generator"
+  short_description: "Plan hardware blocks, power, interfaces, and pin resources"
+  default_prompt: "Use $hardware-architecture-generator to turn these hardware requirements into an architecture IR."

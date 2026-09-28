@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         report_path = args.out / "verification.json"
         report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         paths.append(report_path)
-    except (OSError, KeyError, TypeError, ValueError) as exc:
+    except (OSError, KeyError, TypeError, ValueError, RuntimeError) as exc:
         print(f"Export failed: {exc}", file=sys.stderr)
         return 2
     print(json.dumps({"status": report["status"], "files": [str(p) for p in paths]}, indent=2, ensure_ascii=False))

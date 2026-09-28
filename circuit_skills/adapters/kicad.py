@@ -101,33 +101,9 @@ def _footprint(ir: dict[str, Any], name: str) -> str:
             f'  (pad {_q(pad["number"])} smd {pad["shape"]} (at {_f(pad["x_mm"])} {_f(pad["y_mm"])}) '
             f'(size {_f(pad["width_mm"])} {_f(pad["height_mm"])}) (layers "F.Cu" "F.Paste" "F.Mask"){rratio})'
         )
-    model_path = '${KIPRJMOD}/AwesomeCircuit.3dshapes/' + name + '.wrl'
+    model_path = '../AwesomeCircuit.3dshapes/' + name + '.step'
     lines.append(f'  (model {_q(model_path)} (offset (xyz 0 0 0)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 0)))')
     lines += [')', '']
-    return '\n'.join(lines)
-
-
-def _vrml_box(x: float, y: float, z: float, w: float, l: float, h: float, color: str) -> str:
-    # KiCad's standard VRML 3D model unit is 0.1 inch = 2.54 mm.
-    scale = 1 / 2.54
-    return (
-        f'  Transform {{ translation {_f(x*scale)} {_f(-y*scale)} {_f(z*scale)} children [ '
-        f'Shape {{ appearance Appearance {{ material Material {{ diffuseColor {color} }} }} '
-        f'geometry Box {{ size {_f(w*scale)} {_f(l*scale)} {_f(h*scale)} }} }} ] }}'
-    )
-
-
-def _model3d(ir: dict[str, Any]) -> str:
-    body = ir["package"]["body"]
-    model = ir["model3d"]
-    height = body["height_mm"]
-    standoff = model["body_standoff_mm"]
-    lead_h = model["lead_thickness_mm"]
-    lines = ["#VRML V2.0 utf8", "Group { children ["]
-    lines.append(_vrml_box(0, 0, standoff + height / 2, body["width_mm"], body["length_mm"], height, "0.12 0.12 0.13"))
-    for pad in ir["footprint"]["pads"]:
-        lines.append(_vrml_box(pad["x_mm"], pad["y_mm"], lead_h / 2, pad["width_mm"], pad["height_mm"], lead_h, "0.72 0.72 0.76"))
-    lines.extend(["] }", ""])
     return '\n'.join(lines)
 
 
@@ -195,11 +171,13 @@ def _overview_schematic(ir: dict[str, Any]) -> str:
 
 class KiCadAdapter(EDAAdapter):
     def export_component(self, ir: dict[str, Any], out_dir: Path) -> list[Path]:
+        from ..step import export_step
+
         name = _slug(ir["footprint"]["name"])
         paths = [
+            export_step(ir, out_dir / 'AwesomeCircuit.3dshapes' / f'{name}.step'),
             _write(out_dir / 'AwesomeCircuit.kicad_sym', _symbol(ir, name)),
             _write(out_dir / 'AwesomeCircuit.pretty' / f'{name}.kicad_mod', _footprint(ir, name)),
-            _write(out_dir / 'AwesomeCircuit.3dshapes' / f'{name}.wrl', _model3d(ir)),
             _write(out_dir / 'sym-lib-table', '(sym_lib_table (lib (name "AwesomeCircuit")(type "KiCad")(uri "${KIPRJMOD}/AwesomeCircuit.kicad_sym")(options "")(descr "")))\n'),
             _write(out_dir / 'fp-lib-table', '(fp_lib_table (lib (name "AwesomeCircuit")(type "KiCad")(uri "${KIPRJMOD}/AwesomeCircuit.pretty")(options "")(descr "")))\n'),
         ]
