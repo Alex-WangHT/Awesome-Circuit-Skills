@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "component",
+  "identity": {
+    "manufacturer": "Example Semiconductor (fictional)",
+    "part_number": "EX-QFN4",
+    "package_variant": "QFN-4 example only"
+  },
+  "package": {
+    "pin_count": 4,
+    "body": {"width_mm": 2.0, "length_mm": 2.0, "height_mm": 0.8},
+    "source": "Synthetic fixture drawing, figure 1"
+  },
+  "pins": [
+    {"number": "1", "name": "VDD", "type": "power_in", "unit": "POWER", "source": "Synthetic fixture pin table"},
+    {"number": "2", "name": "IN", "type": "input", "unit": "SIGNAL", "source": "Synthetic fixture pin table"},
+    {"number": "3", "name": "OUT", "type": "output", "unit": "SIGNAL", "source": "Synthetic fixture pin table"},
+    {"number": "4", "name": "GND", "type": "power_in", "unit": "POWER", "source": "Synthetic fixture pin table"}
+  ],
+  "footprint": {
+    "name": "EX_QFN4",
+    "source": "Synthetic recommended land pattern, figure 2",
+    "pin1_at": "1",
+    "courtyard": {"width_mm": 3.2, "length_mm": 3.2},
+    "pads": [
+      {"number": "1", "x_mm": -0.75, "y_mm": -0.75, "width_mm": 0.5, "height_mm": 0.5, "shape": "rect"},
+      {"number": "2", "x_mm": 0.75, "y_mm": -0.75, "width_mm": 0.5, "height_mm": 0.5, "shape": "rect"},
+      {"number": "3", "x_mm": 0.75, "y_mm": 0.75, "width_mm": 0.5, "height_mm": 0.5, "shape": "rect"},
+      {"number": "4", "x_mm": -0.75, "y_mm": 0.75, "width_mm": 0.5, "height_mm": 0.5, "shape": "rect"}
+    ]
+  },
+  "model3d": {"body_standoff_mm": 0.05, "lead_thickness_mm": 0.1},
+  "sources": {"datasheet": "Synthetic fixture: no real device", "revision": "example-1"},
+  "unresolved": []
+}
