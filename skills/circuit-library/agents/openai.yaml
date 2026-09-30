@@ -1,0 +1,6 @@
+interface:
+  display_name: "符号、封装与 3D 工程库"
+  short_description: "依据厂家资料制作器件符号、PCB 封装与 3D 模型并核对库关联"
+  default_prompt: "使用 $circuit-library，依据完整料号和厂家资料制作或核验指定器件的符号、封装、3D 模型及工程库关联。"
+policy:
+  allow_implicit_invocation: true
