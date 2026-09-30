@@ -8,6 +8,8 @@
 | [circuit-schematic](skills/circuit-schematic/SKILL.md) | 绘制、整理和检查原理图；分图页、总线、去耦、外围阻容、接口保护及标识。 |
 | [circuit-library](skills/circuit-library/SKILL.md) | 从 datasheet 建立符号、PCB 封装、3D 模型并关联工程库。 |
 
+三个技能按交付物分工：`circuit-architecture` 负责系统级选型及计划接口 Pinlist；`circuit-library` 负责指定器件的全部物理脚与焊盘映射和库资产；`circuit-schematic` 负责依据前两者绘制实际网络、局部电路和原理图页面，并用网表/ERC 核验连接。同一个脚号可能出现在三份资料中，但分别表示计划分配、器件物理身份和实际连接。
+
 ## 安装与使用
 
 将所需的完整技能目录复制到 `$CODEX_HOME/skills/`；未设置 `CODEX_HOME` 时，使用 `~/.codex/skills/`。例如安装后的入口为 `~/.codex/skills/circuit-architecture/SKILL.md`。`circuit-architecture` 只有 `SKILL.md`，其余技能安装时须保留各自的 `references/` 和 `agents/`。各技能目录可以独立安装。
