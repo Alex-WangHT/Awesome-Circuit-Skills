@@ -1,0 +1,6 @@
+interface:
+  display_name: "原理图绘制与检查"
+  short_description: "按工程规则整理分图页、去耦和接口路径，并核对连接与图面可读性"
+  default_prompt: "使用 $circuit-schematic，按本工程规则整理指定原理图页面，导出图片并检查连接和排版。"
+policy:
+  allow_implicit_invocation: true
