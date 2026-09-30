@@ -1,18 +1,10 @@
-"""Structural validation for the versioned component and architecture IR."""
+"""Validate a versioned architecture IR."""
 
 from __future__ import annotations
 
 import math
 from collections import Counter
 from typing import Any
-
-
-PIN_TYPES = {
-    "input", "output", "bidirectional", "tri_state", "passive", "free",
-    "unspecified", "power_in", "power_out", "open_collector",
-    "open_emitter", "no_connect",
-}
-PAD_SHAPES = {"rect", "roundrect", "circle", "oval"}
 
 
 def validate(ir: dict[str, Any]) -> dict[str, Any]:
@@ -26,16 +18,13 @@ def validate(ir: dict[str, Any]) -> dict[str, Any]:
         return {"status": "FAIL", "issues": issues}
     if ir.get("schema_version") != 1:
         add("error", "schema_version", "schema_version", "Expected schema version 1")
-    kind = ir.get("kind")
-    try:
-        if kind == "component":
-            _component(ir, add)
-        elif kind == "architecture":
+    if ir.get("kind") != "architecture":
+        add("error", "kind", "kind", "Expected architecture IR")
+    else:
+        try:
             _architecture(ir, add)
-        else:
-            add("error", "kind", "kind", "Expected component or architecture")
-    except (AttributeError, TypeError, ValueError, KeyError) as exc:
-        add("error", "malformed_ir", "root", f"Malformed IR structure: {exc}")
+        except (AttributeError, TypeError, ValueError, KeyError) as exc:
+            add("error", "malformed_ir", "root", f"Malformed IR structure: {exc}")
     status = "FAIL" if any(i["level"] == "error" for i in issues) else (
         "REQUIRES_REVIEW" if issues else "PASS"
     )
@@ -58,87 +47,6 @@ def _unique(values: list[Any], path: str, add) -> None:
     for item, count in Counter(values).items():
         if count > 1:
             add("error", "duplicate_id", path, f"Duplicate value: {item}")
-
-
-def _component(ir: dict[str, Any], add) -> None:
-    identity = ir.get("identity") or {}
-    for key in ("manufacturer", "part_number", "package_variant"):
-        _required_text(identity.get(key), f"identity.{key}", add)
-    sources = ir.get("sources") or {}
-    for key in ("datasheet", "revision"):
-        _required_text(sources.get(key), f"sources.{key}", add)
-    package = ir.get("package") or {}
-    pin_count = package.get("pin_count")
-    if not isinstance(pin_count, int) or isinstance(pin_count, bool) or pin_count < 1:
-        add("error", "pin_count", "package.pin_count", "Expected a positive integer")
-    body = package.get("body") or {}
-    for key in ("width_mm", "length_mm", "height_mm"):
-        _positive(body.get(key), f"package.body.{key}", add)
-    _required_text(package.get("source"), "package.source", add)
-
-    pins = ir.get("pins") or []
-    pads = (ir.get("footprint") or {}).get("pads") or []
-    if not isinstance(pins, list) or not pins:
-        add("error", "pins_missing", "pins", "At least one pin is required")
-        pins = []
-    if not isinstance(pads, list) or not pads:
-        add("error", "pads_missing", "footprint.pads", "At least one pad is required")
-        pads = []
-    pin_numbers = [str(p.get("number", "")) for p in pins if isinstance(p, dict)]
-    pad_numbers = [str(p.get("number", "")) for p in pads if isinstance(p, dict)]
-    _unique(pin_numbers, "pins", add)
-    _unique(pad_numbers, "footprint.pads", add)
-    if isinstance(pin_count, int) and (len(pins) != pin_count or len(pads) != pin_count):
-        add("error", "pin_count_mismatch", "package.pin_count", "Package, symbol pin, and footprint pad counts differ")
-    if set(pin_numbers) != set(pad_numbers):
-        add("error", "pin_pad_mismatch", "footprint.pads", "Pin and pad numbers do not match one-to-one")
-    for n, pin in enumerate(pins):
-        if not isinstance(pin, dict):
-            add("error", "pin_record", f"pins[{n}]", "Expected an object")
-            continue
-        for key in ("number", "name", "unit", "source"):
-            _required_text(pin.get(key), f"pins[{n}].{key}", add)
-        if pin.get("type") not in PIN_TYPES:
-            add("error", "pin_type", f"pins[{n}].type", "Unsupported electrical pin type")
-
-    footprint = ir.get("footprint") or {}
-    for key in ("name", "source", "pin1_at"):
-        _required_text(footprint.get(key), f"footprint.{key}", add)
-    if footprint.get("pin1_at") not in pad_numbers:
-        add("error", "pin1_missing", "footprint.pin1_at", "Pin 1 marker must identify a pad")
-    courtyard = footprint.get("courtyard") or {}
-    for key in ("width_mm", "length_mm"):
-        _positive(courtyard.get(key), f"footprint.courtyard.{key}", add)
-    for n, pad in enumerate(pads):
-        if not isinstance(pad, dict):
-            add("error", "pad_record", f"footprint.pads[{n}]", "Expected an object")
-            continue
-        _required_text(pad.get("number"), f"footprint.pads[{n}].number", add)
-        if pad.get("shape") not in PAD_SHAPES:
-            add("error", "pad_shape", f"footprint.pads[{n}].shape", "Unsupported pad shape")
-        for key in ("x_mm", "y_mm"):
-            value = pad.get(key)
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-                add("error", "coordinate", f"footprint.pads[{n}].{key}", "Expected a finite coordinate")
-        for key in ("width_mm", "height_mm"):
-            _positive(pad.get(key), f"footprint.pads[{n}].{key}", add)
-        if all(isinstance(pad.get(k), (int, float)) for k in ("x_mm", "y_mm", "width_mm", "height_mm")) and all(isinstance(courtyard.get(k), (int, float)) for k in ("width_mm", "length_mm")):
-            if abs(pad["x_mm"]) + pad["width_mm"] / 2 > courtyard["width_mm"] / 2 or abs(pad["y_mm"]) + pad["height_mm"] / 2 > courtyard["length_mm"] / 2:
-                add("error", "pad_outside_courtyard", f"footprint.pads[{n}]", "Pad extends outside courtyard")
-    for n, first in enumerate(pads):
-        if not isinstance(first, dict) or not all(isinstance(first.get(k), (int, float)) for k in ("x_mm", "y_mm", "width_mm", "height_mm")):
-            continue
-        for m in range(n + 1, len(pads)):
-            second = pads[m]
-            if not isinstance(second, dict) or not all(isinstance(second.get(k), (int, float)) for k in ("x_mm", "y_mm", "width_mm", "height_mm")):
-                continue
-            if abs(first["x_mm"] - second["x_mm"]) < (first["width_mm"] + second["width_mm"]) / 2 and abs(first["y_mm"] - second["y_mm"]) < (first["height_mm"] + second["height_mm"]) / 2:
-                add("error", "pad_overlap", f"footprint.pads[{n}]", f"Pad overlaps footprint.pads[{m}]")
-    model = ir.get("model3d") or {}
-    for key in ("body_standoff_mm", "lead_thickness_mm"):
-        _positive(model.get(key), f"model3d.{key}", add, allow_zero=key == "body_standoff_mm")
-    if ir.get("unresolved"):
-        add("error", "unresolved", "unresolved", "Resolve critical missing facts before formal export")
 
 
 def _architecture(ir: dict[str, Any], add) -> None:

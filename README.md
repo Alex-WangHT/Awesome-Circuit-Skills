@@ -1,23 +1,58 @@
 # Awesome Circuit Skills
 
-Two reusable skills for the early stages of AI assisted circuit design:
+面向 Codex 的电路工程技能，覆盖硬件架构规划、原理图绘制与器件库制作。已有的原理图和器件库规范保留，并增加从需求生成 Block Diagram、Power Tree 和 PinMap 的技能。
 
-| Skill | Input | Output |
-| --- | --- | --- |
-| [EDA Component Generator](skills/eda-component-generator/SKILL.md) | Exact part/package datasheet | Evidence-backed Component IR, KiCad symbol, footprint, and STEP 3D model |
-| [Hardware Architecture Generator](skills/hardware-architecture-generator/SKILL.md) | System requirements and known parts | Architecture IR, block diagram, power tree, and pin resource plan |
+| Skill | 适用任务 |
+|---|---|
+| [hardware-architecture-generator](skills/hardware-architecture-generator/SKILL.md) | 从系统需求建立功能块、接口契约、电源树、时钟与复位资源、逻辑 PinMap；输出可检查的架构资料。 |
+| [circuit-schematic](skills/circuit-schematic/SKILL.md) | 绘制、整理和检查原理图；分图页、总线、去耦、外围阻容、接口保护及标识。 |
+| [circuit-library](skills/circuit-library/SKILL.md) | 从 datasheet 建立符号、PCB 封装、3D 模型并关联工程库。 |
 
-Each Skill contains its own versioned, EDA-independent JSON contract and example. A [Python adapter interface](circuit_skills/adapters/base.py) isolates KiCad output so another EDA can be added without changing the IR. Python 3.12 is tested; STEP export also needs the packages in the [component Skill requirements](skills/eda-component-generator/requirements.txt).
+## 安装与使用
 
-## Workflow
+将所需的完整技能目录复制到 `$CODEX_HOME/skills/`；未设置 `CODEX_HOME` 时，使用 `~/.codex/skills/`。例如安装后的入口为 `~/.codex/skills/hardware-architecture-generator/SKILL.md`。不要只复制入口，须一并保留该技能的 `references/`、`agents/` 和 `scripts/`（如有）。各技能目录可以独立安装。
 
-1. Use the relevant Skill to extract facts and decisions into JSON. Include datasheet page or figure references for critical part data.
-2. Run `python -m circuit_skills validate component.json` or `python -m circuit_skills validate architecture.json`.
-3. Install the STEP dependency with `python -m pip install -r skills/eda-component-generator/requirements.txt` before component export, then run `python -m circuit_skills export component.json --eda kicad --out output` (or the same command for architecture JSON).
-4. Review the generated report and inspect the artifacts in KiCad before using them in a design.
+在 Codex 中使用 `$hardware-architecture-generator`、`$circuit-schematic` 或 `$circuit-library`，并给出目标工程、对象和任务范围。建议先由架构技能确定功能块、电源和接口，再用原理图技能实现电气连接；涉及新器件库时使用器件库技能。
 
-The component exporter requires explicit pad coordinates and dimensions from a recommended land pattern or documented calculation. It does not infer missing geometry from a package name. Its STEP model is a solid body and pad-aligned lead approximation; complex molded features and package families need richer IR. The architecture KiCad output is a graphical overview, not an electrically connected schematic.
+示例请求：
 
-The KiCad footprint links to the STEP model with a path relative to its `.kicad_mod` file, so the generated library can be moved as one folder without changing the model reference.
+- “使用 $hardware-architecture-generator，根据需求生成 Block Diagram、Power Tree 和 PinMap，并列出尚未确认的器件引脚。”
+- “使用 $circuit-schematic，只整理指定分图页，保留现有电气连接，导出 PDF 和图片并复查。”
+- “使用 $circuit-library，根据完整料号的厂家资料建立符号、PCB 封装和 STEP 模型，关联到工程库。”
 
-`main` is the stable baseline. The two skills are developed on `develop`; this branch is intentionally kept separate from `main`.
+架构技能的 JSON 契约和示例见 [Architecture IR](skills/hardware-architecture-generator/references/architecture-ir.md)。在技能目录中运行 `python scripts/run.py validate path/to/architecture.json` 检查输入，再运行 `python scripts/run.py export path/to/architecture.json --eda kicad --out output-dir` 导出图表、PinMap CSV、报告及 KiCad 架构概览。KiCad 概览仅用于架构沟通，不是完整的电气原理图。
+
+## 规则与范围
+
+完整原理图设计要求 block diagram、powertree、pinlist 齐备且一致。用户明确限定页内排版或局部检查时，按其范围处理并记录未核验项。
+
+每组去耦最多 7 颗、48 脚符号分区阈值等属于原理图技能的默认绘图约定，项目明确要求可以覆盖；器件引脚、尺寸及电气连接必须有资料依据。网表一致、ERC/DRC、图面检查及系统验证分别记录。架构技能应标出假设与待确认项；未经 datasheet 核实的物理引脚不得标记为已确认。
+
+库中不包含具体开发板图纸、厂家 PDF 或第三方 CAD 文件；文中的外部资料链接保留原来源，引用资料的权利归各自所有者。
+
+## 目录
+
+```text
+skills/
+  hardware-architecture-generator/
+    SKILL.md
+    agents/openai.yaml
+    references/architecture-ir.md
+    references/architecture.json
+    scripts/run.py
+    scripts/validation.py
+    scripts/kicad.py
+  circuit-schematic/
+    SKILL.md
+    agents/openai.yaml
+    references/原理图绘制设计规则.md
+    references/分图页-芯片去耦电容.md
+    references/分图页-对外接口与ESD.md
+    references/分图页-芯片外围小元件.md
+  circuit-library/
+    SKILL.md
+    agents/openai.yaml
+    references/器件工程库制作标准.md
+```
+
+`main` 保留稳定内容；新技能在 `develop` 分支开发，不合并到 `main`。
